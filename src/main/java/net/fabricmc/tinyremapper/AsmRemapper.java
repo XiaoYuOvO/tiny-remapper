@@ -19,6 +19,7 @@
 package net.fabricmc.tinyremapper;
 
 import java.util.Collection;
+import java.util.Map;
 
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.Type;
@@ -34,6 +35,8 @@ class AsmRemapper extends TrRemapper {
 		this.context = context;
 		this.tr = context.tr;
 	}
+
+
 
 	@Override
 	public String map(String typeName) {
@@ -108,6 +111,11 @@ class AsmRemapper extends TrRemapper {
 		}
 
 		return name;
+	}
+
+	@Override
+	public Map<String, String> getClassMap() {
+		return tr.classMap;
 	}
 
 	public String mapLambdaInvokeDynamicMethodName(String owner, String name, String desc) {

@@ -34,11 +34,13 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import net.fabricmc.tinyremapper.TinyRemapper.LinkedMethodPropagation;
+import net.fabricmc.tinyremapper.extension.autoremap.AutoObfuscateExtension;
 import net.fabricmc.tinyremapper.extension.mixin.MixinExtension;
 
 public class Main {
 	public static void main(String[] rawArgs) {
-		List<String> args = new ArrayList<String>(rawArgs.length);
+		List<String> args = new ArrayList<>(rawArgs.length);
+		List<String> additionalMappings = new ArrayList<>();
 		boolean ignoreFieldDesc = false;
 		boolean propagatePrivate = false;
 		LinkedMethodPropagation propagateBridges = LinkedMethodPropagation.DISABLED;
@@ -52,10 +54,14 @@ public class Main {
 		boolean rebuildSourceFilenames = false;
 		boolean skipLocalVariableMapping = false;
 		boolean renameInvalidLocals = false;
+		boolean autoObfuscate = false;
 		Pattern invalidLvNamePattern = null;
 		NonClassCopyMode ncCopyMode = NonClassCopyMode.FIX_META_INF;
 		int threads = -1;
 		boolean enableMixin = false;
+		List<String> autoObfFilter = new ArrayList<>();
+		String autoObfPrefix = "net/minecraft/";
+		File autoObfOutputFile = null;
 
 		for (String arg : rawArgs) {
 			if (arg.startsWith("--")) {
@@ -108,6 +114,21 @@ public class Main {
 					break;
 				case "renameinvalidlocals":
 					renameInvalidLocals = true;
+					break;
+				case "autoobfuscate":
+					autoObfuscate = true;
+					break;
+				case "autoobfuscateoutput":
+					autoObfOutputFile = new File(arg.substring(valueSepPos + 1));
+					break;
+				case "autoobffilter":
+					autoObfFilter.add(arg.substring(valueSepPos + 1));
+					break;
+				case "autoobfprefix":
+					autoObfPrefix = arg.substring(valueSepPos + 1);
+					break;
+				case "additionalmapping":
+					additionalMappings.add(arg.substring(valueSepPos + 1));
 					break;
 				case "invalidlvnamepattern":
 					invalidLvNamePattern = Pattern.compile(arg.substring(valueSepPos + 1));
@@ -162,6 +183,13 @@ public class Main {
 		if (!Files.isReadable(mappings) || Files.isDirectory(mappings)) {
 			System.out.println("Can't read mappings file "+mappings+".");
 			System.exit(1);
+		}
+		for (String additionalMapping : additionalMappings) {
+			Path file = new File(additionalMapping).toPath();
+			if (!Files.isReadable(file) || Files.isDirectory(file)) {
+				System.out.println("Can't read mappings file "+file+".");
+				System.exit(1);
+			}
 		}
 
 		String fromM = args.get(3);
@@ -221,8 +249,19 @@ public class Main {
 				.invalidLvNamePattern(invalidLvNamePattern)
 				.threads(threads);
 
+		for (String additionalMapping : additionalMappings) {
+			builder.withMappings(TinyUtils.createTinyMappingProvider(Paths.get(additionalMapping),fromM,toM));
+		}
 		if (enableMixin) {
 			builder = builder.extension(new MixinExtension());
+		}
+
+		if (autoObfuscate){
+			AutoObfuscateExtension extension = new AutoObfuscateExtension(autoObfPrefix, autoObfFilter);
+			if (autoObfOutputFile != null){
+				extension.setOutputFile(autoObfOutputFile);
+			}
+			builder.extension(extension);
 		}
 
 		TinyRemapper remapper = builder.build();

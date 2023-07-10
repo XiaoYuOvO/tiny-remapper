@@ -20,6 +20,8 @@ package net.fabricmc.tinyremapper.api;
 
 import org.objectweb.asm.commons.Remapper;
 
+import java.util.Map;
+
 public abstract class TrRemapper extends Remapper {
 	/**
 	 * remaps a method when the full descriptor is unknown.
@@ -30,6 +32,7 @@ public abstract class TrRemapper extends Remapper {
 	 */
 	public abstract String mapMethodNamePrefixDesc(String owner, String name, String descPrefix);
 
+	public abstract Map<String,String> getClassMap();
 	/**
 	 * remaps a parameter name.
 	 * @param lvIndex the local variable index of the arg
